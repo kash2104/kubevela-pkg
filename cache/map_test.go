@@ -18,13 +18,18 @@ limitations under the License.
 
 import (
 	"context"
-	"fmt"
+	"strconv"
 	"testing"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
+
+func TestCache(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Cache Suite")
+}
 
 var _ = Describe("Test cache utils", func() {
 	It("should return false for IsExpired()", func() {
@@ -33,46 +38,58 @@ var _ = Describe("Test cache utils", func() {
 	})
 
 	It("test cache store", func() {
-		store := NewMemoryCacheStore(context.TODO())
+		store := NewMemoryCacheStore[string](context.TODO())
 		store.Put("test", "test data", time.Second*2)
 		store.Put("test2", "test data", 0)
 		store.Put("test3", "test data", -1)
 		time.Sleep(3 * time.Second)
-		Expect(store.Get("test")).Should(BeNil())
-		Expect(store.Get("test2")).Should(Equal("test data"))
-		Expect(store.Get("test3")).Should(Equal("test data"))
+		value, expired := store.Get("test")
+		Expect(value).Should(BeNil())
+		Expect(expired).Should(BeTrue())
+
+		value, expired = store.Get("test2")
+		Expect(value).Should(Equal("test data"))
+		Expect(expired).Should(BeFalse())
+
+		value, expired = store.Get("test3")
+		Expect(value).Should(Equal("test data"))
+		Expect(expired).Should(BeFalse())
 	})
 
 	It("test cache store delete key", func() {
-		store := NewMemoryCacheStore(context.TODO())
+		store := NewMemoryCacheStore[string](context.TODO())
 		store.Put("test", "test data", time.Minute*2)
 		store.Delete("test")
-		Expect(store.Get("test")).Should(BeNil())
+		value, expired := store.Get("test")
+		Expect(value).Should(BeNil())
+		Expect(expired).Should(BeTrue())
+	})
+
+	It("test cache store with multiple keys", func() {
+		store := NewMemoryCacheStore[string](context.TODO())
+		for i := 0; i < 100; i++ {
+			key := "key-" + strconv.Itoa(i)
+			store.Put(key, i, 0)
+		}
+
+		for i := 0; i < 100; i++ {
+			key := "key-" + strconv.Itoa(i)
+			value, expired := store.Get(key)
+			Expect(expired).Should(BeFalse())
+			Expect(value).Should(Equal(i))
+		}
+	})
+
+	It("test cache store overwrite value", func() {
+		store := NewMemoryCacheStore[string](context.TODO())
+		store.Put("rw", "v1", time.Second)
+		value, expired := store.Get("rw")
+		Expect(expired).Should(BeFalse())
+		Expect(value).Should(Equal("v1"))
+
+		store.Put("rw", "v2", time.Second)
+		value, expired = store.Get("rw")
+		Expect(expired).Should(BeFalse())
+		Expect(value).Should(Equal("v2"))
 	})
 })
-
-var store *MemoryCacheStore
-
-// BenchmarkWrite
-func BenchmarkWrite(b *testing.B) {
-	store = NewMemoryCacheStore(context.TODO())
-
-	for i := 0; i < b.N; i++ {
-		store.Put(fmt.Sprintf("%d", i), i, 0)
-	}
-}
-
-// BenchmarkRead
-func BenchmarkRead(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		store.Get(fmt.Sprintf("%d", i))
-	}
-}
-
-// BenchmarkRW
-func BenchmarkRW(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		store.Put(fmt.Sprintf("%d", i), i, 1)
-		store.Get(fmt.Sprintf("%d", i))
-	}
-}

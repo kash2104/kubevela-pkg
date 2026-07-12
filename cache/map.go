@@ -38,13 +38,13 @@ func (m *memoryCache) GetData() interface{} {
 }
 
 // MemoryCacheStore memory cache store
-type MemoryCacheStore struct {
+type MemoryCacheStore[K comparable] struct {
 	store sync.Map
 }
 
 // NewMemoryCacheStore memory cache store
-func NewMemoryCacheStore(ctx context.Context) *MemoryCacheStore {
-	mcs := &MemoryCacheStore{
+func NewMemoryCacheStore[K comparable](ctx context.Context) *MemoryCacheStore[K] {
+	mcs := &MemoryCacheStore[K]{
 		store: sync.Map{},
 	}
 	go mcs.run(ctx)
@@ -52,7 +52,7 @@ func NewMemoryCacheStore(ctx context.Context) *MemoryCacheStore {
 }
 
 // run start a goroutine to clear expired cache data
-func (m *MemoryCacheStore) run(ctx context.Context) {
+func (m *MemoryCacheStore[K]) run(ctx context.Context) {
 	ticker := time.NewTicker(DefaultSweepInterval)
 	defer ticker.Stop()
 	for {
@@ -71,21 +71,21 @@ func (m *MemoryCacheStore) run(ctx context.Context) {
 }
 
 // Get cache data from store, if cache data is expired, return nil
-func (m *MemoryCacheStore) Get(key interface{}) (value interface{}) {
+func (m *MemoryCacheStore[K]) Get(key K) (value interface{}, expired bool) {
 	mc, ok := m.store.Load(key)
 	if ok && !mc.(*memoryCache).IsExpired() {
-		return mc.(*memoryCache).GetData()
+		return mc.(*memoryCache).GetData(), false
 	}
-	return nil
+	return nil, true
 }
 
 // Put cache data, if cacheDuration>0, store will clear data after timeout.
-func (m *MemoryCacheStore) Put(key, value interface{}, cacheDuration time.Duration) {
+func (m *MemoryCacheStore[K]) Put(key K, value interface{}, cacheDuration time.Duration) {
 	mc := NewMemoryCache(value, cacheDuration)
 	m.store.Store(key, mc)
 }
 
 // Delete cache data from store
-func (m *MemoryCacheStore) Delete(key interface{}) {
+func (m *MemoryCacheStore[K]) Delete(key K) {
 	m.store.Delete(key)
 }
