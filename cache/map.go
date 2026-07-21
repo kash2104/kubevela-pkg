@@ -62,7 +62,7 @@ func (m *MemoryCacheStore[K]) run(ctx context.Context) {
 		case <-ticker.C:
 			m.store.Range(func(key, value interface{}) bool {
 				if value.(*memoryCache).IsExpired() {
-					m.store.Delete(key)
+					m.store.CompareAndDelete(key, value)
 				}
 				return true
 			})
@@ -71,12 +71,12 @@ func (m *MemoryCacheStore[K]) run(ctx context.Context) {
 }
 
 // Get cache data from store, if cache data is expired, return nil
-func (m *MemoryCacheStore[K]) Get(key K) (value interface{}, expired bool) {
+func (m *MemoryCacheStore[K]) Get(key K) (value interface{}, found bool) {
 	mc, ok := m.store.Load(key)
 	if ok && !mc.(*memoryCache).IsExpired() {
-		return mc.(*memoryCache).GetData(), false
+		return mc.(*memoryCache).GetData(), true
 	}
-	return nil, true
+	return nil, false
 }
 
 // Put cache data, if cacheDuration>0, store will clear data after timeout.

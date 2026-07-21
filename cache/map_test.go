@@ -43,26 +43,26 @@ var _ = Describe("Test cache utils", func() {
 		store.Put("test2", "test data", 0)
 		store.Put("test3", "test data", -1)
 		time.Sleep(3 * time.Second)
-		value, expired := store.Get("test")
+		value, found := store.Get("test")
 		Expect(value).Should(BeNil())
-		Expect(expired).Should(BeTrue())
+		Expect(found).Should(BeFalse())
 
-		value, expired = store.Get("test2")
+		value, found = store.Get("test2")
 		Expect(value).Should(Equal("test data"))
-		Expect(expired).Should(BeFalse())
+		Expect(found).Should(BeTrue())
 
-		value, expired = store.Get("test3")
+		value, found = store.Get("test3")
 		Expect(value).Should(Equal("test data"))
-		Expect(expired).Should(BeFalse())
+		Expect(found).Should(BeTrue())
 	})
 
 	It("test cache store delete key", func() {
 		store := NewMemoryCacheStore[string](context.TODO())
 		store.Put("test", "test data", time.Minute*2)
 		store.Delete("test")
-		value, expired := store.Get("test")
+		value, found := store.Get("test")
 		Expect(value).Should(BeNil())
-		Expect(expired).Should(BeTrue())
+		Expect(found).Should(BeFalse())
 	})
 
 	It("test cache store with multiple keys", func() {
@@ -74,8 +74,8 @@ var _ = Describe("Test cache utils", func() {
 
 		for i := 0; i < 100; i++ {
 			key := "key-" + strconv.Itoa(i)
-			value, expired := store.Get(key)
-			Expect(expired).Should(BeFalse())
+			value, found := store.Get(key)
+			Expect(found).Should(BeTrue())
 			Expect(value).Should(Equal(i))
 		}
 	})
@@ -83,13 +83,13 @@ var _ = Describe("Test cache utils", func() {
 	It("test cache store overwrite value", func() {
 		store := NewMemoryCacheStore[string](context.TODO())
 		store.Put("rw", "v1", time.Second)
-		value, expired := store.Get("rw")
-		Expect(expired).Should(BeFalse())
+		value, found := store.Get("rw")
+		Expect(found).Should(BeTrue())
 		Expect(value).Should(Equal("v1"))
 
 		store.Put("rw", "v2", time.Second)
-		value, expired = store.Get("rw")
-		Expect(expired).Should(BeFalse())
+		value, found = store.Get("rw")
+		Expect(found).Should(BeTrue())
 		Expect(value).Should(Equal("v2"))
 	})
 })
