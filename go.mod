@@ -8,6 +8,7 @@ require (
 	github.com/evanphx/json-patch v5.6.0+incompatible
 	github.com/go-stack/stack v1.8.1
 	github.com/google/go-cmp v0.7.0
+	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/jellydator/ttlcache/v3 v3.0.1
 	github.com/klauspost/compress v1.17.10
 	github.com/mitchellh/hashstructure/v2 v2.0.2
